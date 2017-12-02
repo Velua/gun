@@ -3,9 +3,6 @@ import Gun from 'gun/gun'
 import path from 'gun/lib/path'
 import './style.css'
 
-const formatTodos = todos => Object.keys(todos)
-  .map(key => ({ key, val: todos[key] }))
-  .filter(t => Boolean(t.val) && t.key !== '_')
 
 export default class Todos extends Component {
   constructor({gun}) {
@@ -15,22 +12,31 @@ export default class Todos extends Component {
   }
 
   componentWillMount() {
-    this.gun.on(todos => this.setState({
-      todos: formatTodos(todos)
-    }))
+    this.gun.map().on((val, key) => {
+      this.setState(prevState => ({
+        todos: [
+          ...prevState.todos.filter(todo => todo.key !== key), 
+          { key, val }
+        ]
+      }))
+    })
   }
 
   add = e => {
     e.preventDefault()
-    this.gun.path(Gun.text.random()).put(this.state.newTodo)
+    this.gun.set(this.state.newTodo)
     this.setState({newTodo: ''})
   }
 
-  del = key => this.gun.path(key).put(null)
+  del = key => {
+    this.gun.path(key).put(null)
+  }
+
 
   handleChange = e => this.setState({ newTodo: e.target.value})
 
   render() {
+    console.log(this.state.todos)
     return <div>
       <form onSubmit={this.add}>
         <input value={this.state.newTodo} onChange={this.handleChange} />
@@ -38,7 +44,7 @@ export default class Todos extends Component {
       </form>
       <br />
       <ul>
-        {this.state.todos.map(todo => <li key={todo.key} onClick={_=>this.del(todo.key)}>{todo.val}</li>)}
+        {this.state.todos.map((todo, i) => todo && <li key={i} onClick={_=>this.del(todo.key)}>{todo.val}</li>)}
       </ul>
     </div>
   }
